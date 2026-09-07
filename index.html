@@ -378,6 +378,13 @@ button{cursor:pointer;border:0}
 
 .row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:14px}
 .subject-item{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px}
+.subject-item.pinned {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, var(--bg));
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 4px;
+}
 
 .timer{text-align:center; padding: 8px 10px; max-width: 520px; margin: 0 auto 10px auto;}
 .timer h2{font-size: 14px; margin-bottom: 4px;}
@@ -796,7 +803,7 @@ th{color:var(--muted);font-size:13px}
   </div>
 </div>
 
-<section id="home" class="page active">
+<section id="home" class="page">
  <div class="hero">
    <h2 id="welcomeText">স্বাগতম, STUDENT 👋</h2>
    <p>প্রিয়, তোমার পড়ার সময় ট্র্যাক করো, লক্ষ্য ঠিক করো এবং প্রতিদিন একটু একটু করে এগিয়ে যাও।</p>
@@ -807,7 +814,7 @@ th{color:var(--muted);font-size:13px}
   <div class="card stat">
     <div class="box-header">
       <span class="icon">⏰</span>
-      <span class="muted">আজকের পড়া</span>
+      <span class="muted">আজকের পড়া</span>
     </div>
     <div class="num" id="todayHours">0 Hours 0 Mins</div>
   </div>
@@ -884,7 +891,7 @@ th{color:var(--muted);font-size:13px}
  </div>
 
  <div class="card timer">
-    <h2>⏱️ Self Tracker</h2>
+    <h2>⏱️ Timer</h2>
     <p class="muted">বিষয় নির্বাচন করো এবং সময় পরিবর্তন করতে টাইমারের ওপর ট্যাপ করো।</p>
     <select id="subjectSelect" onchange="handleSubjectChange()"></select><br>
 
@@ -1187,6 +1194,20 @@ th{color:var(--muted);font-size:13px}
   </div>
 </div>
 
+<!-- Edit Subject Modal -->
+<div class="modal-overlay" id="editSubjectModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>✏️ বিষয় পরিবর্তন করুন</h3>
+      <button class="close-btn" onclick="closeEditSubjectModal()">✕</button>
+    </div>
+    <input type="hidden" id="editSubjectIndex">
+    <label style="font-size:12px; font-weight:600;">নতুন নাম:</label>
+    <input id="editSubjectInput" type="text" style="width:100%; padding:8px; margin:4px 0 12px; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text);">
+    <button class="btn blue-deepgreen-anim-btn" onclick="saveEditedSubject()">Save Changes</button>
+  </div>
+</div>
+
 <audio id="alarmAudio" loop></audio>
 
 <script>
@@ -1232,7 +1253,6 @@ function resolveCustomInput(isOk) {
   }
 }
 
-// Helper Promise to make showCustomInputModal async/await friendly
 function promptAsync(message, defaultValue) {
   return new Promise((resolve) => {
     showCustomInputModal(message, 'prompt', defaultValue, (isOk, val) => {
@@ -1242,7 +1262,6 @@ function promptAsync(message, defaultValue) {
   });
 }
 
-// --- Android Alarm Sync Function ---
 function syncAlarmsWithAndroid() {
   try {
     if (typeof Android !== "undefined" && Android.clearAllAlarms && Android.setAlarm) {
@@ -1261,7 +1280,6 @@ function syncAlarmsWithAndroid() {
   } catch(e) { console.error("Android sync error", e); }
 }
 
-// --- Custom Alert Function ---
 function showCustomAlert(message) {
   $('customAlertMessage').textContent = message;
   $('customAlertModal').classList.add('active');
@@ -1270,7 +1288,6 @@ function closeCustomAlert() {
   $('customAlertModal').classList.remove('active');
 }
 
-// --- Service Worker for Offline Support ---
 if ('serviceWorker' in navigator) {
   const swCode = `
     const CACHE_NAME = 'studyzone-v1';
@@ -1289,7 +1306,6 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(err => console.log('SW register failed:', err));
 }
 
-// --- Screen Wake Lock API ---
 let wakeLock = null;
 const requestWakeLock = async () => {
   try {
@@ -1341,7 +1357,6 @@ function stopOtherTimers(activeType) {
 function handleAppBackgroundOrClose() {
   const now = Date.now();
   
-  // ০. বর্তমানে সক্রিয় থাকা পেজ/ট্যাব এবং নেভিগেশন বাটন সেভ করা
   const activePage = document.querySelector('.page.active, .tab-content.active, section.active, .tab-pane.active');
   const activeBtn = document.querySelector('.tab-btn.active, .nav-btn.active, .nav-item.active');
   if (activePage && activePage.id) {
@@ -1351,7 +1366,6 @@ function handleAppBackgroundOrClose() {
     localStorage.setItem('studyzone_active_btn_id', activeBtn.id);
   }
 
-  // ব্যাকগ্রাউন্ড বা পেজ বন্ধ হওয়ার সময় সব টাইমারের বর্তমান মান সেভ করা
   localStorage.setItem('studyzone_times', JSON.stringify({
     remainingMs: remainingMs,
     selectedTimeMs: selectedTimeMs,
@@ -1374,7 +1388,6 @@ function handleAppBackgroundOrClose() {
   }
 }
 
-// ইভент লিসেনারসমূহ
 window.addEventListener('beforeunload', handleAppBackgroundOrClose);
 window.addEventListener('pageshow', recoverBackgroundState);
 document.addEventListener('visibilitychange', () => {
@@ -1388,7 +1401,6 @@ document.addEventListener('visibilitychange', () => {
 function recoverBackgroundState() {
   const now = Date.now();
   
-  // ০. আগের সক্রিয় পেজ/ট্যাব ফিরিয়ে আনা
   let savedPageId = localStorage.getItem('studyzone_active_page_id');
   let savedBtnId = localStorage.getItem('studyzone_active_btn_id');
   
@@ -1397,6 +1409,8 @@ function recoverBackgroundState() {
     if (activeEl) {
       document.querySelectorAll('.page, .tab-content, section, .tab-pane').forEach(el => el.classList.remove('active'));
       activeEl.classList.add('active');
+      const titles={home:"Today's Dashboard",tracker:'Self Tracker',routine:'Daily Routine',profile:'Profile Settings'};
+      if(titles[savedPageId]) $('pageTitle').textContent = titles[savedPageId];
     }
   }
   if (savedBtnId) {
@@ -1407,7 +1421,6 @@ function recoverBackgroundState() {
     }
   }
 
-  // ১. সেভ থাকা আগের সময়গুলো ভ্যারিয়েবলে লোড করা
   let savedTimes = JSON.parse(localStorage.getItem('studyzone_times') || 'null');
   if (savedTimes) {
     remainingMs = savedTimes.remainingMs || 0;
@@ -1417,7 +1430,6 @@ function recoverBackgroundState() {
     localStorage.removeItem('studyzone_times');
   }
 
-  // ২. স্টাডি টাইমারের ব্যাকগ্রাউন্ড সময় হিসাব করা
   let studyState = JSON.parse(localStorage.getItem('study_running_state') || 'null');
   if (studyState && studyState.active) {
     let elapsed = now - studyState.timestamp;
@@ -1446,7 +1458,6 @@ function recoverBackgroundState() {
     localStorage.removeItem('study_running_state');
   }
 
-  // ৩. টপ স্টপওয়াচের ব্যাকগ্রাউন্ড সময় হিসাব করা
   let topSwState = JSON.parse(localStorage.getItem('top_sw_running_state') || 'null');
   if (topSwState && topSwState.active) {
     let elapsed = now - topSwState.timestamp;
@@ -1458,7 +1469,6 @@ function recoverBackgroundState() {
     localStorage.removeItem('top_sw_running_state');
   }
 
-  // ৪. টুডু/ট্যাব স্টপওয়াচের ব্যাকগ্রাউন্ড সময় হিসাব করা
   let todoSwState = JSON.parse(localStorage.getItem('todo_sw_running_state') || 'null');
   if (todoSwState && todoSwState.active) {
     let elapsed = now - todoSwState.timestamp;
@@ -1470,15 +1480,12 @@ function recoverBackgroundState() {
     localStorage.removeItem('todo_sw_running_state');
   }
 
-  // ৫. সময় হিসাব সম্পন্ন হওয়ার পর নিরাপদে UI আপডেট করা
   if ($('studyTime')) $('studyTime').textContent = fmtMs(remainingMs);
   if ($('topStopwatchDisplay')) $('topStopwatchDisplay').textContent = fmtMs(topStopwatchMs);
   if ($('todoStopwatchDisplay')) $('todoStopwatchDisplay').textContent = fmtMs(tabStopwatchMs);
 }
 
-// পেজ নতুন করে লোড হলে বা ব্যাকগ্রাউন্ড থেকে ফিরে এলে সাথে সাথে স্টেট রিকভার করার জন্য
 recoverBackgroundState();
-
 
 setInterval(() => {
   const now = Date.now();
@@ -1506,7 +1513,7 @@ let defaultUserData = {
   theme: "light",
   goalHours: 0,
   goalMinutes: 0,
-  subjects: [],
+  subjects: [], // Can be objects or strings. Let's support object format for subjects if needed: {name, pinned} or store pinned separately/as property.
   subjectTimes: {},
   screenMs: 0,
   routines: [],
@@ -1537,6 +1544,14 @@ function syncUserData(){
 }
 
 if(!Array.isArray(data.subjects)) data.subjects = [];
+// Convert old string subjects to object format if necessary for pin support
+data.subjects = data.subjects.map(sub => {
+  if (typeof sub === 'string') {
+    return { name: sub, pinned: false };
+  }
+  return sub;
+});
+
 if(!Array.isArray(data.routines)) data.routines = [];
 if(!Array.isArray(data.socials)) data.socials = [];
 if(!data.namaz) data.namaz = {fajr:false, dhuhr:false, asr:false, maghrib:false, isha:false};
@@ -1554,6 +1569,18 @@ function getActiveCycleDate() {
   let m = String(cycleDate.getMonth() + 1).padStart(2, '0');
   let d = String(cycleDate.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
+}
+
+function formatDateDDMMYY(dateStr) {
+  if (!dateStr) return '';
+  let parts = dateStr.split('-');
+  if (parts.length === 3) {
+    let y = parts[0].slice(-2);
+    let m = parts[1];
+    let d = parts[2];
+    return `${d}/${m}/${y}`;
+  }
+  return dateStr;
 }
 
 function checkAndResetDailyData() {
@@ -1664,8 +1691,9 @@ function checkAuthStatus(){
       showPage('profile', null, false);
       history.replaceState({page: 'profile'}, '', '');
     } else {
-      showPage('home', null, false);
-      history.replaceState({page: 'home'}, '', '');
+      let activePageId = document.querySelector('.page.active')?.id || 'home';
+      showPage(activePageId, null, false);
+      history.replaceState({page: activePageId}, '', '');
     }
   } else {
     $('authScreen').style.display = 'flex';
@@ -1710,6 +1738,12 @@ function handleLogin(){
 
   if(existingUserKey){
     data = allUsersData[existingUserKey];
+    if(Array.isArray(data.subjects)){
+      data.subjects = data.subjects.map(sub => {
+        if (typeof sub === 'string') return { name: sub, pinned: false };
+        return sub;
+      });
+    }
   } else {
     data = {
       ...defaultUserData,
@@ -2052,6 +2086,11 @@ function showPage(id, btn, pushState = true){
  
  if(btn && btn.tagName === 'BUTTON' && btn.parentElement.classList.contains('nav')) {
    btn.classList.add('active');
+ } else {
+   const navButtons = document.querySelectorAll('.nav button');
+   if(id === 'home' && navButtons[0]) navButtons[0].classList.add('active');
+   if(id === 'tracker' && navButtons[1]) navButtons[1].classList.add('active');
+   if(id === 'routine' && navButtons[2]) navButtons[2].classList.add('active');
  }
  
  const titles={home:"Today's Dashboard",tracker:'Self Tracker',routine:'Daily Routine',profile:'Profile Settings'};
@@ -2079,22 +2118,27 @@ window.addEventListener('popstate', (event) => {
   let openModals = document.querySelectorAll('.modal-overlay.active');
   if(openModals.length > 0){
     openModals.forEach(m => m.classList.remove('active'));
-    history.pushState({page: document.querySelector('.page.active').id}, '', '');
+    let activePageId = document.querySelector('.page.active')?.id || 'home';
+    history.pushState({page: activePageId}, '', '');
     return;
   }
 
-  let activePageId = document.querySelector('.page.active').id;
-  if (activePageId !== 'home') {
-    showPage('home', null, false);
-    history.replaceState({page: 'home'}, '', '');
+  if (event.state && event.state.page) {
+    showPage(event.state.page, null, false);
   } else {
-    showCustomInputModal('অ্যাপ থেকে বের হতে চান?', 'confirm', '', (isOk) => {
-      if(isOk) {
-        window.close();
-      } else {
-        history.pushState({page: 'home'}, '', '');
-      }
-    });
+    let activePageId = document.querySelector('.page.active')?.id || 'home';
+    if (activePageId !== 'home') {
+      showPage('home', null, false);
+      history.replaceState({page: 'home'}, '', '');
+    } else {
+      showCustomInputModal('অ্যাপ থেকে বের হতে চান?', 'confirm', '', (isOk) => {
+        if(isOk) {
+          window.close();
+        } else {
+          history.pushState({page: 'home'}, '', '');
+        }
+      });
+    }
   }
 });
 
@@ -2463,8 +2507,8 @@ function addSubject(){
  if(!val) return;
  if(!Array.isArray(data.subjects)) data.subjects = [];
  
- if(!data.subjects.includes(val)){
-    data.subjects.push(val);
+ if(!data.subjects.some(sub => sub.name === val)){
+    data.subjects.push({ name: val, pinned: false });
     if(!data.subjectTimes) data.subjectTimes = {};
     data.subjectTimes[val] = 0;
     $('subjectInput').value = '';
@@ -2474,8 +2518,47 @@ function addSubject(){
  }
 }
 
+function togglePinSubject(index){
+  if(!Array.isArray(data.subjects)) return;
+  data.subjects[index].pinned = !data.subjects[index].pinned;
+  data.subjects.sort((a, b) => (b.pinned === true) - (a.pinned === true));
+  save();
+}
+
+function openEditSubjectModal(index){
+  $('editSubjectIndex').value = index;
+  $('editSubjectInput').value = data.subjects[index].name;
+  $('editSubjectModal').classList.add('active');
+}
+
+function closeEditSubjectModal(){
+  $('editSubjectModal').classList.remove('active');
+}
+
+function saveEditedSubject(){
+  let index = $('editSubjectIndex').value;
+  let newVal = $('editSubjectInput').value.trim();
+  if(!newVal) {
+    showCustomAlert('দয়া করে সাবজেক্টের নাম লিখুন!');
+    return;
+  }
+  let oldVal = data.subjects[index].name;
+  if(newVal !== oldVal && data.subjects.some(sub => sub.name === newVal)){
+    showCustomAlert('এই নামের সাবজেক্ট ইতিমধ্যে রয়েছে!');
+    return;
+  }
+  
+  data.subjects[index].name = newVal;
+  if(oldVal !== newVal && data.subjectTimes){
+    data.subjectTimes[newVal] = data.subjectTimes[oldVal] || 0;
+    delete data.subjectTimes[oldVal];
+  }
+  save();
+  closeEditSubjectModal();
+}
+
 function delSubject(index){
- let subName = data.subjects[index];
+ let subName = data.subjects[index].name;
  data.subjects.splice(index,1);
  if(data.subjectTimes && data.subjectTimes[subName] !== undefined){
    delete data.subjectTimes[subName];
@@ -2491,13 +2574,17 @@ function renderSubjects(){
  let currentSelected = $('subjectSelect') ? $('subjectSelect').value : '';
 
  $('subjectList').innerHTML = data.subjects.length ? data.subjects.map((sub, i) => `
-    <div class="subject-item">
-      <span><b>${esc(sub)}</b></span>
-      <button class="btn danger sm" onclick="delSubject(${i})">Delete</button>
+    <div class="subject-item ${sub.pinned ? 'pinned' : ''}">
+      <span><b>${sub.pinned ? '📌 ' : ''}${esc(sub.name)}</b></span>
+      <div style="display:flex; gap:4px;">
+        <button class="btn sm secondary" onclick="togglePinSubject(${i})" style="padding:2px 6px; font-size:11px;" title="Pin/Unpin">${sub.pinned ? 'Unpin' : 'Pin'}</button>
+        <button class="btn sm secondary" onclick="openEditSubjectModal(${i})">Edit</button>
+        <button class="btn danger sm" onclick="delSubject(${i})">Delete</button>
+      </div>
     </div>
  `).join('') : '<p class="muted">No subjects added.</p>';
 
- $('subjectSelect').innerHTML = data.subjects.length ? data.subjects.map(sub => `<option value="${esc(sub)}" ${currentSelected === sub ? 'selected' : ''}>${esc(sub)}</option>`).join('') : '<option>Add subjects</option>';
+ $('subjectSelect').innerHTML = data.subjects.length ? data.subjects.map(sub => `<option value="${esc(sub.name)}" ${currentSelected === sub.name ? 'selected' : ''}>${esc(sub.name)}</option>`).join('') : '<option>Add subjects</option>';
 }
 
 function renderReport(){
@@ -2505,10 +2592,11 @@ function renderReport(){
  if(!data.subjectTimes) data.subjectTimes = {};
 
  $('reportTable').innerHTML = data.subjects.length ? data.subjects.map(s => {
-    let subMs = data.subjectTimes[s] || 0;
+    let subName = s.name;
+    let subMs = data.subjectTimes[subName] || 0;
     return `
       <tr>
-        <td>${esc(s)}</td>
+        <td>${esc(subName)}</td>
         <td>${formatDetailedTimeNoMs(subMs)}</td>
       </tr>
     `;
@@ -2629,38 +2717,62 @@ function openHistoryModal(type){
   historyMap[todayKey] = {
     studySeconds: Math.floor((data.secondsMs || 0) / 1000),
     screenSeconds: Math.floor((data.screenMs || 0) / 1000),
-    namazCount: Object.values(data.namaz || {}).filter(Boolean).length
+    namazCount: Object.values(data.namaz || {}).filter(Boolean).length,
+    subjectTimes: {...data.subjectTimes}
   };
 
   let keys = Object.keys(historyMap).sort().reverse();
 
   if(type === 'study'){
     titleEl.textContent = 'Study History';
-    colNameEl.textContent = 'Study Time';
-    tbodyEl.innerHTML = keys.length ? keys.map(k => `
-      <tr>
-        <td><b>${k}</b></td>
-        <td>${formatDetailedTimeNoMs((historyMap[k].studySeconds || 0) * 1000)}</td>
-      </tr>
-    `).join('') : '<tr><td colspan="2" class="muted">No history found.</td></tr>';
+    colNameEl.textContent = 'Study Time & Subjects';
+    tbodyEl.innerHTML = keys.length ? keys.map(k => {
+      let entry = historyMap[k];
+      let totalStr = formatDetailedTimeNoMs((entry.studySeconds || 0) * 1000);
+      let subDetails = '';
+      if(entry.subjectTimes && typeof entry.subjectTimes === 'object') {
+        let subItems = Object.entries(entry.subjectTimes).filter(([s, ms]) => ms > 0);
+        if(subItems.length > 0) {
+          subDetails = ` <span style="font-size:12px; color:var(--muted); font-weight:normal;">(` +
+            subItems.map(([subName, ms]) => `${esc(subName)}: ${formatDetailedTimeNoMs(ms)}`).join(', ') +
+            `)</span>`;
+        }
+      }
+      let formattedDate = formatDateDDMMYY(k);
+      return `
+        <tr>
+          <td><b>${formattedDate}</b></td>
+          <td>
+            <span style="font-weight:700; color:var(--primary);">${totalStr}</span>
+            ${subDetails}
+          </td>
+        </tr>
+      `;
+    }).join('') : '<tr><td colspan="2" class="muted">No history found.</td></tr>';
   } else if(type === 'screen'){
     titleEl.textContent = 'Screen Time History';
     colNameEl.textContent = 'Screen Time';
-    tbodyEl.innerHTML = keys.length ? keys.map(k => `
-      <tr>
-        <td><b>${k}</b></td>
-        <td>${formatDetailedTimeNoMs((historyMap[k].screenSeconds || 0) * 1000)}</td>
-      </tr>
-    `).join('') : '<tr><td colspan="2" class="muted">No history found.</td></tr>';
+    tbodyEl.innerHTML = keys.length ? keys.map(k => {
+      let formattedDate = formatDateDDMMYY(k);
+      return `
+        <tr>
+          <td><b>${formattedDate}</b></td>
+          <td>${formatDetailedTimeNoMs((historyMap[k].screenSeconds || 0) * 1000)}</td>
+        </tr>
+      `;
+    }).join('') : '<tr><td colspan="2" class="muted">No history found.</td></tr>';
   } else if(type === 'namaz'){
     titleEl.textContent = 'Namaz History';
     colNameEl.textContent = 'Completed';
-    tbodyEl.innerHTML = keys.length ? keys.map(k => `
-      <tr>
-        <td><b>${k}</b></td>
-        <td>${historyMap[k].namazCount || 0} / 5 ওয়াক্ত</td>
-      </tr>
-    `).join('') : '<tr><td colspan="2" class="muted">No history found.</td></tr>';
+    tbodyEl.innerHTML = keys.length ? keys.map(k => {
+      let formattedDate = formatDateDDMMYY(k);
+      return `
+        <tr>
+          <td><b>${formattedDate}</b></td>
+          <td>${historyMap[k].namazCount || 0} / 5 ওয়াক্ত</td>
+        </tr>
+      `;
+    }).join('') : '<tr><td colspan="2" class="muted">No history found.</td></tr>';
   }
 }
 
