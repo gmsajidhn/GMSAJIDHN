@@ -1078,7 +1078,7 @@ padding: 5px 12px; font-size: 12px;">Start</button>
     <div style="font-size: 50px; margin-bottom: 10px; animation: colorAnim 1s infinite;">⏰</div>
     <h3 style="margin: 0 0 10px 0; font-size: 18px; color: var(--danger);">রুটিন রিমাইন্ডার!</h3>
     <p id="alarmTaskTitle" style="font-size: 15px; font-weight: 700; margin-bottom: 20px; color: var(--primary);"></p>
-    <button class="btn blue-deepgreen-anim-btn" onclick="stopAlarm()">OK</button>
+    <button class="btn blue-deepgreen-anim-btn" onclick="stopAlarm()">বন্ধ করুন</button>
   </div>
 </div>
 
@@ -2706,7 +2706,7 @@ function triggerAlarm(taskTitle){
   }
   audio.play().catch(e=>console.log(e));  
   if ('Notification' in window && Notification.permission === 'granted') {
-    new Notification(" রুটিন রিমাইন্ডার!", { body: `এখন সময়: ${taskTitle}` });
+    new Notification(" ⏰রুটিন রিমাইন্ডার⏰ ", { body: `কাজ : ${taskTitle}` });
   }
   $('alarmTaskTitle').textContent = `এখন সময়: ${taskTitle}`;
   $('alarmModal').classList.add('active');
