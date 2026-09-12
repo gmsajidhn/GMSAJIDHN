@@ -2706,7 +2706,7 @@ function triggerAlarm(taskTitle){
   }
   audio.play().catch(e=>console.log(e));  
   if ('Notification' in window && Notification.permission === 'granted') {
-    new Notification(" ⏰রুটিন রিমাইন্ডার⏰ ", { body: `➡️কাজ : ${taskTitle}⬅️` });
+    new Notification("⏰রুটিন রিমাইন্ডার⏰ ", { body: `➡️কাজ : ${taskTitle} ।` });
   }
   $('alarmTaskTitle').textContent = `কাজ : ${taskTitle}`;
   $('alarmModal').classList.add('active');
